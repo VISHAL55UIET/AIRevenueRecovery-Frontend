@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 
 import DashboardLayout from "./components/layout/DashboardLayout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import Dashboard from "./components/dashboard/Dashboard";
 import Payments from "./components/payments/Payments";
@@ -19,16 +20,14 @@ import OAuth2Callback from "./components/auth/OAuth2Callback";
 function App() {
   return (
     <Routes>
-      <Route
-        path="/oauth2/callback"
-        element={<OAuth2Callback />}
-      />
+
+      {/* ================= PUBLIC ROUTES ================= */}
+
       <Route
         path="/signin"
         element={<SignIn />}
       />
 
-      {/* Keep /login as an alias */}
       <Route
         path="/login"
         element={<SignIn />}
@@ -38,55 +37,86 @@ function App() {
         path="/signup"
         element={<Signup />}
       />
+
+      <Route
+        path="/oauth2/callback"
+        element={<OAuth2Callback />}
+      />
+
       <Route
         path="/how-it-works"
         element={<HowItWorks />}
       />
-      <Route
-        path="/*"
-        element={
-          <DashboardLayout>
-            <Routes>
-              <Route
-                path="/"
-                element={<Dashboard />}
-              />
 
-              <Route
-                path="/payments"
-                element={<Payments />}
-              />
 
-              <Route
-                path="/payments/recent"
-                element={<RecentPayments />}
-              />
+      {/* ================= PROTECTED ROUTES ================= */}
 
-              <Route
-                path="/customers"
-                element={<Customers />}
-              />
+      <Route element={<ProtectedRoute />}>
 
-              <Route
-                path="/recovery"
-                element={<Recovery />}
-              />
+        <Route
+          path="/"
+          element={
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
+          }
+        />
 
-              <Route
-                path="/analytics"
-                element={<Analytics />}
-              />
+        <Route
+          path="/payments"
+          element={
+            <DashboardLayout>
+              <Payments />
+            </DashboardLayout>
+          }
+        />
 
-              <Route
-                path="/ai-recovery"
-                element={<AIRecovery />}
-              />
+        <Route
+          path="/payments/recent"
+          element={
+            <DashboardLayout>
+              <RecentPayments />
+            </DashboardLayout>
+          }
+        />
 
-            </Routes>
+        <Route
+          path="/customers"
+          element={
+            <DashboardLayout>
+              <Customers />
+            </DashboardLayout>
+          }
+        />
 
-          </DashboardLayout>
-        }
-      />
+        <Route
+          path="/recovery"
+          element={
+            <DashboardLayout>
+              <Recovery />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/analytics"
+          element={
+            <DashboardLayout>
+              <Analytics />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/ai-recovery"
+          element={
+            <DashboardLayout>
+              <AIRecovery />
+            </DashboardLayout>
+          }
+        />
+
+      </Route>
 
     </Routes>
   );
