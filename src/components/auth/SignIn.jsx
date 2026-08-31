@@ -13,7 +13,7 @@ import {
   Lock,
 } from "lucide-react";
 
-const API_URL = "http://localhost:8080";
+const API_URL = import.meta.env.VITE_API_URL;
 
 function SignIn() {
   const navigate = useNavigate();
@@ -27,10 +27,6 @@ function SignIn() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ==========================================
-  // HANDLE INPUT CHANGE
-  // ==========================================
-
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -38,9 +34,7 @@ function SignIn() {
     });
   };
 
-  // ==========================================
-  // LOGIN
-  // ==========================================
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,18 +84,14 @@ function SignIn() {
     }
   };
 
-  // ==========================================
-  // GOOGLE LOGIN
-  // ==========================================
+  
 
   const handleGoogleLogin = () => {
     window.location.href =
       "http://localhost:8080/oauth2/authorization/google";
   };
 
-  // ==========================================
-  // SCROLL
-  // ==========================================
+  
 
   const scrollToSection = (id) => {
     document
@@ -110,18 +100,8 @@ function SignIn() {
         behavior: "smooth",
       });
   };
-
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <div className="min-h-screen bg-[#f4f7ff] text-slate-900">
-
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
-
       <header className="sticky top-0 z-50 border-b border-indigo-200/30 bg-gradient-to-r from-[#2639d8] via-[#4f46e5] to-[#8b2cf5] text-white shadow-[0_8px_30px_rgba(79,70,229,0.25)]">
 
         <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between px-6 lg:px-10">
