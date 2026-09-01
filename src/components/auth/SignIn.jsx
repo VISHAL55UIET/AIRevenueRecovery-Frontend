@@ -1,86 +1,47 @@
-import React, { useState } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
-import axios from "axios";
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-import {
-  Sparkles,
-  Brain,
-  Clock3,
-  TrendingUp,
-  ArrowRight,
-  PlayCircle,
-  Mail,
-  Lock,
-} from "lucide-react";
+  setError("");
+  setLoading(true);
 
-const API_URL = import.meta.env.VITE_API_URL;
+  try {
+    const response = await axios.post(
+      `${API_URL}/auth/login`,
+      formData
+    );
 
-function SignIn() {
-  const navigate = useNavigate();
-  const location = useLocation();
+    const data = response.data;
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+    localStorage.setItem("token", data.token);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        userId: data.userId,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      })
+    );
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const redirectTo =
+      location.state?.from?.pathname || "/";
+
+    navigate(redirectTo, {
+      replace: true,
     });
-  };
 
-  
+  } catch (err) {
+    console.error("Login error:", err);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    setError("");
-    setLoading(true);
-
-const response = await axios.post(
-  `${API_URL}/auth/login`,
-  formData
-);
-      const data = response.data;
-
-      // Save JWT
-      localStorage.setItem("token", data.token);
-
-      // Save user information
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          userId: data.userId,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-        })
-      );
-
-      // Redirect
-      const redirectTo =
-        location.state?.from?.pathname || "/";
-
-      navigate(redirectTo, {
-        replace: true,
-      });
-
-    } catch (err) {
-      console.error("Login error:", err);
-
-      setError(
-        err.response?.data?.message ||
-          "Invalid email or password"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setError(
+      err.response?.data?.message ||
+      "Invalid email or password"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   
 const handleGoogleLogin = () => {
@@ -765,6 +726,5 @@ const handleGoogleLogin = () => {
 
     </div>
   );
-}
 
 export default SignIn;
