@@ -42,12 +42,10 @@ function SignIn() {
     setError("");
     setLoading(true);
 
-    try {
-      const response = await axios.post(
-        `${API_URL}/api/auth/login`,
-        formData
-      );
-
+const response = await axios.post(
+  `${API_URL}/auth/login`,
+  formData
+);
       const data = response.data;
 
       // Save JWT
