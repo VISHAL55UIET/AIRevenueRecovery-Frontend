@@ -164,11 +164,7 @@ function Login() {
                             />
 
                         </div>
-
-
-                        {/* Password */}
                         <div className="mb-5">
-
                             <label
                                 htmlFor="password"
                                 className="mb-2 block text-sm font-medium text-slate-700"
