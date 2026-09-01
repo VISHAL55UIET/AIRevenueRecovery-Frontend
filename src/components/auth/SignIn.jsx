@@ -40,7 +40,7 @@ const handleSubmit = async (e) => {
     );
   } finally {
     setLoading(false);
-  
+  }
 };
 
   
@@ -720,6 +720,5 @@ const handleGoogleLogin = () => {
 
     </div>
   );
-}
 
 export default SignIn;

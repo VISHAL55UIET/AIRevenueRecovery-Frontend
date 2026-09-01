@@ -45,10 +45,6 @@ function Signup() {
     };
 
 
-    // =====================================================
-    // SIGNUP
-    // =====================================================
-
     const handleSubmit = async (e) => {
 
         e.preventDefault();
@@ -207,11 +203,6 @@ function Signup() {
         }
     };
 
-
-    // =====================================================
-    // GOOGLE OAUTH
-    // =====================================================
-
  const handleGoogleSignup = () => {
     window.location.href =
         `${import.meta.env.VITE_API_URL.replace("/api", "")}/oauth2/authorization/google`;
@@ -220,11 +211,6 @@ function Signup() {
     return (
 
         <div className="min-h-screen bg-[#F5F7FF] text-slate-900">
-
-
-            {/* ================================================= */}
-            {/* BACKGROUND GLOW */}
-            {/* ================================================= */}
 
             <div className="pointer-events-none fixed inset-0 overflow-hidden">
 
