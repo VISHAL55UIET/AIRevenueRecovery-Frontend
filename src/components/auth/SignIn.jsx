@@ -1,3 +1,38 @@
+import React, { useState } from "react";
+import axios from "axios";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Sparkles,
+  ArrowRight,
+  Brain,
+  Clock3,
+  TrendingUp,
+  PlayCircle,
+  Mail,
+  Lock,
+} from "lucide-react";
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+const SignIn = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -11,9 +46,7 @@ const handleSubmit = async (e) => {
     );
 
     const data = response.data;
-
     localStorage.setItem("token", data.token);
-
     localStorage.setItem(
       "user",
       JSON.stringify({
@@ -23,17 +56,14 @@ const handleSubmit = async (e) => {
         role: data.role,
       })
     );
-
     const redirectTo =
-      location.state?.from?.pathname || "/";
+    location.state?.from?.pathname || "/";
 
     navigate(redirectTo, {
       replace: true,
     });
-
   } catch (err) {
     console.error("Login error:", err);
-
     setError(
       err.response?.data?.message ||
       "Invalid email or password"
@@ -42,77 +72,49 @@ const handleSubmit = async (e) => {
     setLoading(false);
   }
 };
-
-  
 const handleGoogleLogin = () => {
   window.location.href =
     `${import.meta.env.VITE_API_URL.replace("/api", "")}/oauth2/authorization/google`;
 };
   
-
-  const scrollToSection = (id) => {
-    document
-      .getElementById(id)
-      ?.scrollIntoView({
-        behavior: "smooth",
-      });
-  };
+const scrollToSection = (id) => {
+  document
+    .getElementById(id)  ?.scrollIntoView({  behavior: "smooth",});
+};
   return (
     <div className="min-h-screen bg-[#f4f7ff] text-slate-900">
       <header className="sticky top-0 z-50 border-b border-indigo-200/30 bg-gradient-to-r from-[#2639d8] via-[#4f46e5] to-[#8b2cf5] text-white shadow-[0_8px_30px_rgba(79,70,229,0.25)]">
-
         <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between px-6 lg:px-10">
-
-          {/* LOGO */}
-
           <Link
             to="/signin"
             className="flex items-center gap-3"
           >
-
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-lg font-bold text-white ring-1 ring-white/30">
               AI
             </div>
-
             <div>
               <p className="text-sm font-bold tracking-wide">
                 REVENUE RECOVERY
               </p>
-
               <p className="text-xs text-indigo-100">
                 AI Payment Platform
               </p>
             </div>
-
           </Link>
-
-
-          {/* CENTER */}
-
           <nav className="hidden items-center lg:flex">
-
             <button
               onClick={() =>
                 scrollToSection("how-it-works")
               }
               className="group flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
             >
-
               <Sparkles size={16} />
-
               <span>
                 How it works
               </span>
-
             </button>
-
           </nav>
-
-
-          {/* RIGHT */}
-
           <div className="flex items-center gap-6">
-
             <button
               onClick={() =>
                 scrollToSection("platform")
@@ -121,7 +123,6 @@ const handleGoogleLogin = () => {
             >
               Platform
             </button>
-
             <button
               onClick={() =>
                 scrollToSection("recovery")
@@ -130,7 +131,6 @@ const handleGoogleLogin = () => {
             >
               Recovery
             </button>
-
             <button
               onClick={() =>
                 scrollToSection("analytics")
@@ -139,149 +139,78 @@ const handleGoogleLogin = () => {
             >
               Analytics
             </button>
-
             <Link
               to="/signup"
               className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-105 hover:from-blue-700 hover:to-violet-700"
             >
               Create account
-
               <ArrowRight
                 size={15}
                 className="transition-transform duration-300 group-hover:translate-x-1"
               />
-
             </Link>
-
           </div>
-
         </div>
-
       </header>
-
-
-      {/* =====================================================
-          HERO
-      ===================================================== */}
-
       <main>
-
         <section className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-gradient-to-br from-[#f5f7ff] via-[#eef2ff] to-[#f7f1ff]">
-
-          {/* Background Glow */}
-
           <div className="pointer-events-none absolute -left-40 top-10 h-[500px] w-[500px] rounded-full bg-indigo-300/30 blur-[120px]" />
-
           <div className="pointer-events-none absolute -right-40 top-10 h-[500px] w-[500px] rounded-full bg-purple-300/30 blur-[120px]" />
-
           <div className="pointer-events-none absolute bottom-0 left-1/3 h-[350px] w-[350px] rounded-full bg-blue-200/30 blur-[100px]" />
-
           <div className="pointer-events-none absolute bottom-0 right-0 h-[450px] w-[450px] rounded-full bg-violet-300/25 blur-[120px]" />
-
-
-          {/* Decorative dots */}
-
           <div className="pointer-events-none absolute left-[48%] top-[40%] h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_15px_5px_rgba(99,102,241,0.25)]" />
-
           <div className="pointer-events-none absolute right-[10%] top-[55%] h-1.5 w-1.5 rounded-full bg-purple-500 shadow-[0_0_15px_5px_rgba(168,85,247,0.25)]" />
-
-
           <div className="relative mx-auto grid min-h-[calc(100vh-80px)] max-w-[1500px] items-center gap-14 px-6 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:px-16 lg:py-16">
             <div className="max-w-2xl">
-
-              {/* Badge */}
-
+              
               <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-indigo-300 bg-white/70 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-indigo-600 shadow-sm backdrop-blur">
-
                 <Sparkles size={15} />
-
                 AI-POWERED PAYMENTS
-
               </div>
-
-
-              {/* Heading */}
-
+              
               <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-6xl lg:text-7xl">
-
                 Recover revenue.
-
                 <br />
-
                 <span className="bg-gradient-to-r from-[#315ee8] via-[#6246ea] to-[#9b2cf5] bg-clip-text text-transparent">
                   Automatically.
                 </span>
-
               </h1>
-
-
-              {/* Description */}
-
               <p className="mt-7 max-w-xl text-lg leading-8 text-slate-600">
-
                 Detect failed payments, understand why revenue is
                 at risk, and trigger the right recovery action —
                 all from one intelligent platform.
-
               </p>
-
-
-              {/* =================================================
-                  FEATURES
-              ================================================= */}
-
               <div
                 id="platform"
                 className="mt-10 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3"
               >
-
-                {/* AI Detection */}
-
                 <div className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_35px_rgba(71,85,150,0.10)] backdrop-blur transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_15px_40px_rgba(71,85,150,0.15)]">
-
                   <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-
                     <Brain size={22} />
-
                   </div>
-
                   <h3 className="font-semibold text-slate-900">
                     AI Detection
                   </h3>
-
                   <p className="mt-1 text-sm text-slate-500">
                     Intelligent failure detection
                   </p>
-
                 </div>
-
-
-                {/* Monitoring */}
-
                 <div
                   id="recovery"
                   className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_35px_rgba(71,85,150,0.10)] backdrop-blur transition hover:-translate-y-1 hover:border-purple-200 hover:shadow-[0_15px_40px_rgba(71,85,150,0.15)]"
                 >
-
                   <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-
                     <Clock3 size={22} />
-
                   </div>
-
                   <h3 className="font-semibold text-slate-900">
                     24/7 Monitoring
                   </h3>
-
                   <p className="mt-1 text-sm text-slate-500">
                     Continuous revenue monitoring
                   </p>
-
                 </div>
 
-
                 {/* Recovery */}
-
                 <div
                   id="analytics"
                   className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_35px_rgba(71,85,150,0.10)] backdrop-blur transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_15px_40px_rgba(71,85,150,0.15)]"
@@ -720,5 +649,8 @@ const handleGoogleLogin = () => {
 
     </div>
   );
+}
+
+
 
 export default SignIn;
