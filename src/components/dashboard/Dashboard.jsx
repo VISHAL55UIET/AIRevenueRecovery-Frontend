@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
+
 import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
   Clock3,
-  IndianRupee,
   CreditCard,
   Users,
   RefreshCw,
@@ -12,26 +12,475 @@ import {
   Sparkles,
   ArrowUpRight,
   Activity,
+  Brain,
+  Target,
+  Zap,
 } from 'lucide-react'
 
 import RevenueChart from '../recovery/RevenueChart'
 import RecoveryPerformance from '../recovery/RecoveryPerformance'
 import RecoveryOverview from '../recovery/RecoveryOverview'
-import AIRecoveryInsight from './AIRecoveryInsight'
+import AIRecoveryInsight from '../dashboard/AIRecoveryInsight'
 import RecentPayments from './RecentPayments'
 
-import {
-  getDashboardStats,
-} from '../../services/dashboardService'
+import { getDashboardStats } from '../../services/dashboardService'
+import { getRecoveryIntelligence } from '../../api/recoveryIntelligenceApi'
+import api from '../../api/axios'
 
+
+/* =========================================================
+   RECOVERY INTELLIGENCE CARD
+   ========================================================= */
+
+function RecoveryIntelligenceCard({ paymentId }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(Boolean(paymentId))
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadIntelligence = async () => {
+      if (!paymentId) {
+        setData(null)
+        setLoading(false)
+        setError(null)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const result = await getRecoveryIntelligence(paymentId)
+
+        if (!cancelled) {
+          setData(result)
+        }
+      } catch (err) {
+        console.error('Recovery intelligence error:', err)
+
+        if (!cancelled) {
+          setError(
+            err?.response?.data?.message ||
+            err?.message ||
+            'Unable to load recovery intelligence.'
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadIntelligence()
+
+    return () => {
+      cancelled = true
+    }
+  }, [paymentId])
+
+  /* LOADING */
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-indigo-50 p-3 text-indigo-600">
+            <Brain size={20} className="animate-pulse" />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-900">
+              Recovery Intelligence
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-500">
+              AI is analyzing the latest failed payment...
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+      </div>
+    )
+  }
+
+  /* ERROR */
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-5">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-red-100 p-2.5 text-red-600">
+            <AlertTriangle size={18} />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-red-800">
+              Recovery Intelligence
+            </h3>
+
+            <p className="mt-1 text-sm text-red-600">
+              {error}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* NO FAILED PAYMENT */
+
+  if (!data) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600">
+            <Brain size={18} />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-900">
+              Recovery Intelligence
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              No failed payment available for analysis.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const score = Number(data.score ?? 0)
+
+  const priority = String(
+    data.priority ?? 'MEDIUM'
+  ).toUpperCase()
+
+  const action = String(
+    data.action ?? 'MANUAL_REVIEW'
+  ).replaceAll('_', ' ')
+
+  const successfulPayments =
+    data.successfulPayments ?? 0
+
+  const failedPayments =
+    data.failedPayments ?? 0
+
+  const priorityClasses = {
+    HIGH: 'bg-red-50 text-red-600 border-red-100',
+    MEDIUM: 'bg-amber-50 text-amber-600 border-amber-100',
+    LOW: 'bg-slate-100 text-slate-600 border-slate-200',
+  }
+
+  const actionClasses = {
+    RETRY_NOW: 'bg-indigo-600 text-white',
+    RETRY_SOON: 'bg-indigo-50 text-indigo-700',
+    SEND_REMINDER: 'bg-emerald-50 text-emerald-700',
+    MANUAL_REVIEW: 'bg-amber-50 text-amber-700',
+  }
+
+  return (
+    <div className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
+
+      {/* CARD HEADER */}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+
+        <div className="flex items-center gap-3">
+
+          <div className="rounded-xl bg-indigo-50 p-3 text-indigo-600">
+            <Brain size={20} />
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+
+              <h3 className="text-base font-bold text-slate-900">
+                Recovery Intelligence
+              </h3>
+
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                AI ACTIVE
+              </span>
+
+            </div>
+
+            <p className="mt-1 text-xs text-slate-500">
+              AI-assisted recovery recommendation
+            </p>
+          </div>
+
+        </div>
+
+        <span
+          className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${
+            priorityClasses[priority] ||
+            priorityClasses.MEDIUM
+          }`}
+        >
+          {priority} PRIORITY
+        </span>
+
+      </div>
+
+
+      {/* SCORE */}
+
+      <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+
+        <div className="flex flex-col gap-5 md:flex-row md:items-center">
+
+          <div className="flex items-center gap-4">
+
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
+
+              <div className="absolute inset-1 rounded-full border-4 border-indigo-100" />
+
+              <div className="relative text-center">
+
+                <div className="text-2xl font-bold text-slate-900">
+                  {score}
+                </div>
+
+                <div className="text-[10px] font-medium text-slate-400">
+                  /100
+                </div>
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <div className="flex items-center gap-2">
+
+                <Target
+                  size={16}
+                  className="text-indigo-600"
+                />
+
+                <span className="text-sm font-semibold text-slate-900">
+                  Recovery Score
+                </span>
+
+              </div>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Based on payment & customer history
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {/* SCORE BAR */}
+
+          <div className="flex-1">
+
+            <div className="mb-2 flex items-center justify-between text-xs">
+
+              <span className="font-medium text-slate-500">
+                Recovery probability
+              </span>
+
+              <span className="font-bold text-indigo-600">
+                {score}%
+              </span>
+
+            </div>
+
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+
+              <div
+                className="h-full rounded-full bg-indigo-600 transition-all duration-700"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.max(0, score)
+                  )}%`,
+                }}
+              />
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* RECOMMENDED ACTION */}
+
+      <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+          <div className="flex items-start gap-3">
+
+            <div className="rounded-xl bg-white p-2.5 text-indigo-600 shadow-sm">
+              <Zap size={18} />
+            </div>
+
+            <div>
+
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Recommended Action
+              </p>
+
+              <p className="mt-1 text-base font-bold text-slate-900">
+                {action}
+              </p>
+
+            </div>
+
+          </div>
+
+          <span
+            className={`w-fit rounded-xl px-4 py-2 text-xs font-bold ${
+              actionClasses[data.action] ||
+              actionClasses.MANUAL_REVIEW
+            }`}
+          >
+            AI Recommendation
+          </span>
+
+        </div>
+
+      </div>
+
+
+      {/* WHY */}
+
+      <div className="mt-4 rounded-xl border border-slate-100 bg-white p-4">
+
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Why this recommendation?
+        </p>
+
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {data.reason}
+        </p>
+
+      </div>
+
+
+      {/* CUSTOMER HISTORY */}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-xs font-medium text-slate-400">
+                Successful Payments
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-emerald-600">
+                {successfulPayments}
+              </p>
+
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
+              <CheckCircle2 size={18} />
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-xs font-medium text-slate-400">
+                Failed Payments
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-red-500">
+                {failedPayments}
+              </p>
+
+            </div>
+
+            <div className="rounded-xl bg-red-50 p-2.5 text-red-500">
+              <AlertTriangle size={18} />
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* PAYMENT INFO */}
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+
+        <div>
+
+          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+            Payment
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-slate-700">
+            {data.paymentId}
+          </p>
+
+        </div>
+
+        {data.amount != null && (
+          <div className="text-right">
+
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">
+              Amount
+            </p>
+
+            <p className="mt-1 text-sm font-bold text-slate-900">
+              ₹{Number(data.amount).toLocaleString('en-IN')}
+            </p>
+
+          </div>
+        )}
+
+      </div>
+
+    </div>
+  )
+}
+
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
 
 function Dashboard() {
 
   const [stats, setStats] = useState(null)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] =
+    useState(true)
 
-  const [error, setError] = useState('')
+  const [error, setError] =
+    useState('')
 
   const [selectedPeriod, setSelectedPeriod] =
     useState('30')
@@ -41,6 +490,10 @@ function Dashboard() {
 
   const [refreshing, setRefreshing] =
     useState(false)
+
+  const [latestFailedPayment, setLatestFailedPayment] =
+    useState(null)
+
 
   const periods = [
     {
@@ -68,18 +521,70 @@ function Dashboard() {
         period.value === selectedPeriod
     )?.label || 'Last 30 days'
 
+
+  /* =========================================================
+     LOAD DASHBOARD DATA
+     ========================================================= */
+
   const loadDashboard = async () => {
 
     try {
 
       setError('')
 
-      const data =
-        await getDashboardStats(
+      const [
+        dashboardResponse,
+        paymentsResponse,
+      ] = await Promise.all([
+
+        getDashboardStats(
           Number(selectedPeriod)
+        ),
+
+        api.get('/payments/recent'),
+
+      ])
+
+
+      setStats(dashboardResponse)
+
+
+      const payments =
+        Array.isArray(paymentsResponse?.data)
+          ? paymentsResponse.data
+          : Array.isArray(
+              paymentsResponse?.data?.content
+            )
+            ? paymentsResponse.data.content
+            : Array.isArray(
+                paymentsResponse?.data?.data
+              )
+              ? paymentsResponse.data.data
+              : []
+
+
+      /*
+       * Pick the latest failed payment.
+       *
+       * This payment ID is sent to:
+       *
+       * GET /api/recovery-intelligence/{paymentId}
+       *
+       * through getRecoveryIntelligence().
+       */
+
+      const failedPayment =
+        payments.find(
+          (payment) =>
+            String(
+              payment?.status || ''
+            ).toUpperCase() === 'FAILED'
         )
 
-      setStats(data)
+
+      setLatestFailedPayment(
+        failedPayment || null
+      )
 
     } catch (err) {
 
@@ -98,8 +603,13 @@ function Dashboard() {
       setRefreshing(false)
 
     }
+
   }
 
+
+  /* =========================================================
+     INITIAL LOAD + PERIOD CHANGE
+     ========================================================= */
 
   useEffect(() => {
 
@@ -108,6 +618,10 @@ function Dashboard() {
   }, [selectedPeriod])
 
 
+  /* =========================================================
+     REFRESH
+     ========================================================= */
+
   const handleRefresh = async () => {
 
     setRefreshing(true)
@@ -115,6 +629,11 @@ function Dashboard() {
     await loadDashboard()
 
   }
+
+
+  /* =========================================================
+     LOADING UI
+     ========================================================= */
 
   if (loading) {
 
@@ -148,8 +667,13 @@ function Dashboard() {
 
       </div>
     )
+
   }
 
+
+  /* =========================================================
+     ERROR UI
+     ========================================================= */
 
   if (error) {
 
@@ -196,11 +720,15 @@ function Dashboard() {
 
       </div>
     )
+
   }
 
 
-  const safeStats = stats || {}
+  /* =========================================================
+     SAFE STATS
+     ========================================================= */
 
+  const safeStats = stats || {}
 
   const totalProcessed =
     safeStats.totalProcessed ?? 0
@@ -223,16 +751,19 @@ function Dashboard() {
   const activeCustomers =
     safeStats.activeCustomers ?? 0
 
-  return (
 
+  /* =========================================================
+     DASHBOARD UI
+     ========================================================= */
+
+  return (
     <div className="min-h-screen bg-slate-50">
 
       <div className="mx-auto max-w-[1500px] px-6 py-8">
 
-
-        {/* ================================================= */}
-        {/* HEADER */}
-        {/* ================================================= */}
+        {/* =================================================
+            HEADER
+            ================================================= */}
 
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
@@ -260,8 +791,9 @@ function Dashboard() {
             </p>
 
           </div>
-          <div className="flex items-center gap-3">
 
+
+          <div className="flex items-center gap-3">
 
             {/* PERIOD DROPDOWN */}
 
@@ -270,9 +802,7 @@ function Dashboard() {
               <button
                 type="button"
                 onClick={() =>
-                  setPeriodOpen(
-                    !periodOpen
-                  )
+                  setPeriodOpen(!periodOpen)
                 }
                 className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
@@ -299,7 +829,6 @@ function Dashboard() {
 
 
               {periodOpen && (
-
                 <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
 
                   {periods.map(
@@ -343,7 +872,6 @@ function Dashboard() {
                   )}
 
                 </div>
-
               )}
 
             </div>
@@ -377,8 +905,12 @@ function Dashboard() {
 
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
+        {/* =================================================
+            TOP METRIC CARDS
+            ================================================= */}
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
           <MetricCard
             title="Total Payments"
@@ -388,7 +920,6 @@ function Dashboard() {
             iconStyle="bg-indigo-50 text-indigo-600"
           />
 
-
           <MetricCard
             title="Failed Payments"
             value={failedPayments}
@@ -396,7 +927,6 @@ function Dashboard() {
             icon={AlertTriangle}
             iconStyle="bg-amber-50 text-amber-600"
           />
-
 
           <MetricCard
             title="Recovered Revenue"
@@ -408,7 +938,6 @@ function Dashboard() {
             iconStyle="bg-emerald-50 text-emerald-600"
           />
 
-
           <MetricCard
             title="Recovery Rate"
             value={`${recoveryRate}%`}
@@ -419,8 +948,12 @@ function Dashboard() {
 
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(340px,0.75fr)]">
 
+        {/* =================================================
+            REVENUE + RECOVERY OVERVIEW
+            ================================================= */}
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(340px,0.75fr)]">
 
           {/* REVENUE CHART */}
 
@@ -451,11 +984,14 @@ function Dashboard() {
 
             </div>
 
+
             <div className="p-6">
 
-            <RevenueChart
-  period={Number(selectedPeriod)}
-/>
+              <RevenueChart
+                period={Number(
+                  selectedPeriod
+                )}
+              />
 
             </div>
 
@@ -481,12 +1017,11 @@ function Dashboard() {
               </div>
 
               <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600">
-
                 <CreditCard size={17} />
-
               </div>
 
             </div>
+
 
             <div className="mt-6">
 
@@ -499,6 +1034,10 @@ function Dashboard() {
         </div>
 
 
+        {/* =================================================
+            AI RECOVERY OPPORTUNITY
+            ================================================= */}
+
         <section className="mt-6 overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm">
 
           <div className="border-b border-indigo-50 bg-indigo-50/40 px-6 py-5">
@@ -506,9 +1045,7 @@ function Dashboard() {
             <div className="flex items-center gap-3">
 
               <div className="rounded-xl bg-indigo-600 p-2.5 text-white shadow-sm">
-
                 <Sparkles size={18} />
-
               </div>
 
               <div>
@@ -527,17 +1064,27 @@ function Dashboard() {
 
           </div>
 
+
           <div className="p-6">
 
-            <AIRecoveryInsight />
+            <RecoveryIntelligenceCard
+              paymentId={
+                latestFailedPayment?.id
+              }
+            />
 
           </div>
 
         </section>
 
 
+        {/* =================================================
+            RECOVERY PERFORMANCE + AI INSIGHTS
+            ================================================= */}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
 
+          {/* RECOVERY PERFORMANCE */}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
@@ -562,6 +1109,7 @@ function Dashboard() {
 
             </div>
 
+
             <div className="mt-6">
 
               <RecoveryPerformance />
@@ -570,6 +1118,8 @@ function Dashboard() {
 
           </section>
 
+
+          {/* AI INSIGHTS */}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
@@ -594,6 +1144,7 @@ function Dashboard() {
 
             </div>
 
+
             <div className="mt-6">
 
               <AIRecoveryInsight />
@@ -603,6 +1154,11 @@ function Dashboard() {
           </section>
 
         </div>
+
+
+        {/* =================================================
+            RECENT PAYMENTS
+            ================================================= */}
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
 
@@ -627,6 +1183,7 @@ function Dashboard() {
 
           </div>
 
+
           <div className="p-6">
 
             <RecentPayments />
@@ -634,8 +1191,13 @@ function Dashboard() {
           </div>
 
         </section>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
 
+
+        {/* =================================================
+            SUMMARY CARDS
+            ================================================= */}
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
 
           <SummaryCard
             icon={Users}
@@ -644,14 +1206,12 @@ function Dashboard() {
             description="Customers with recent activity"
           />
 
-
           <SummaryCard
             icon={Clock3}
             title="Pending Recovery"
             value={pendingPayments}
             description="Payments awaiting recovery"
           />
-
 
           <SummaryCard
             icon={CheckCircle2}
@@ -662,13 +1222,16 @@ function Dashboard() {
 
         </div>
 
-
       </div>
 
     </div>
   )
 }
 
+
+/* =========================================================
+   METRIC CARD
+   ========================================================= */
 
 function MetricCard({
   title,
@@ -696,15 +1259,15 @@ function MetricCard({
 
         </div>
 
+
         <div
           className={`rounded-xl p-2.5 ${iconStyle}`}
         >
-
           <Icon size={18} />
-
         </div>
 
       </div>
+
 
       <p className="mt-4 text-xs text-slate-400">
         {description}
@@ -714,6 +1277,10 @@ function MetricCard({
   )
 }
 
+
+/* =========================================================
+   SUMMARY CARD
+   ========================================================= */
 
 function SummaryCard({
   icon: Icon,
@@ -727,10 +1294,9 @@ function SummaryCard({
     <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
       <div className="rounded-xl bg-slate-50 p-3 text-slate-600">
-
         <Icon size={19} />
-
       </div>
+
 
       <div className="min-w-0">
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+
 const BACKEND_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 function PaymentButton({
@@ -58,7 +59,6 @@ function PaymentButton({
                     color: "#3399cc"
                 },
 
-                // Payment methods
                 method: {
                     card: true,
                     netbanking: true,
@@ -68,12 +68,14 @@ function PaymentButton({
 
                 // 4. Payment Success Handler
                 handler: async function (paymentResponse) {
+
                     console.log(
                         "Razorpay Payment Response:",
                         paymentResponse
                     );
 
                     try {
+
                         // 5. Verify payment with backend
                         const verifyResponse = await axios.post(
                             `${BACKEND_URL}/api/payments/${paymentId}/razorpay-verify`,
@@ -94,53 +96,83 @@ function PaymentButton({
                             verifyResponse.data
                         );
 
-                        // Backend returns Payment object
                         if (
                             verifyResponse.data &&
-                            verifyResponse.data.status === "SUCCESS"
+                            verifyResponse.data.status === "RECOVERED"
                         ) {
-                            alert(
-                                "Payment successful and verified!"
-                            );
 
                             console.log(
                                 "Payment recovered successfully."
                             );
 
-                            // Optional: refresh page
-                            window.location.reload();
+                            /*
+                             * Send success event to Payments.jsx
+                             * so it can show the custom success toast.
+                             */
+                            window.dispatchEvent(
+                                new CustomEvent(
+                                    "payment-recovered",
+                                    {
+                                        detail: {
+                                            paymentId:
+                                                verifyResponse.data.paymentId ||
+                                                paymentId,
+
+                                            amount:
+                                                verifyResponse.data.amount ||
+                                                amount
+                                        }
+                                    }
+                                )
+                            );
+
+                            /*
+                             * Give backend/database a moment to finish
+                             * before refreshing the payments list.
+                             */
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 800);
 
                         } else {
+
                             alert(
                                 "Payment verification failed."
                             );
+
                         }
 
                     } catch (error) {
+
                         console.error(
                             "Payment verification error:",
                             error
                         );
 
                         if (error.response) {
+
                             console.error(
                                 "Verification backend response:",
                                 error.response.data
                             );
+
                         }
 
                         alert(
                             "Payment completed but verification failed."
                         );
+
                     }
                 },
 
                 // 6. Checkout closed
                 modal: {
                     ondismiss: function () {
+
                         console.log(
                             "Razorpay Checkout closed."
                         );
+
                     }
                 }
             };
@@ -152,16 +184,19 @@ function PaymentButton({
             razorpay.open();
 
         } catch (error) {
+
             console.error(
                 "Unable to create Razorpay order:",
                 error
             );
 
             if (error.response) {
+
                 console.error(
                     "Backend response:",
                     error.response.data
                 );
+
             }
 
             alert(
@@ -169,13 +204,16 @@ function PaymentButton({
             );
 
         } finally {
+
             setLoading(false);
+
         }
     };
-const displayAmount =
-    amount != null
-        ? Number(amount).toLocaleString("en-IN")
-        : "";
+
+    const displayAmount =
+        amount != null
+            ? Number(amount).toLocaleString("en-IN")
+            : "";
 
     return (
         <button

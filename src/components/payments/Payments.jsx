@@ -10,16 +10,14 @@ import {
   IndianRupee,
   AlertCircle,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
+import { useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 
 import api from '../../api/axios'
 import PaymentButton from './PaymentButton'
 
-
 function Payments() {
-
   const [payments, setPayments] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -29,12 +27,13 @@ function Payments() {
 
   const [error, setError] = useState('')
 
-const navigate = useNavigate()
+  // Payment success toast
+  const [paymentSuccess, setPaymentSuccess] = useState(null)
+
+  const navigate = useNavigate()
 
   const fetchPayments = async (isRefresh = false) => {
-
     try {
-
       if (isRefresh) {
         setRefreshing(true)
       } else {
@@ -43,208 +42,178 @@ const navigate = useNavigate()
 
       setError('')
 
-      const response =
-        await api.get('/payments/recent')
+      const response = await api.get('/payments/recent')
 
       setPayments(response.data || [])
-
     } catch (err) {
+      console.error('Payments error:', err)
 
-      console.error(
-        'Payments error:',
-        err
-      )
-
-      setError(
-        'Unable to load payments.'
-      )
-
+      setError('Unable to load payments.')
     } finally {
-
       setLoading(false)
       setRefreshing(false)
-
     }
   }
+
   useEffect(() => {
-
     fetchPayments()
+  }, [])
 
+  // Listen for successful Razorpay recovery
+  useEffect(() => {
+    const handlePaymentRecovered = (event) => {
+      const paymentId =
+        event.detail?.paymentId || ''
+
+      const amount =
+        event.detail?.amount || 0
+
+      setPaymentSuccess({
+        paymentId,
+        amount,
+      })
+
+      // Refresh payment list so status becomes RECOVERED
+      fetchPayments(true)
+
+      // Automatically hide toast
+      setTimeout(() => {
+        setPaymentSuccess(null)
+      }, 4000)
+    }
+
+    window.addEventListener(
+      'payment-recovered',
+      handlePaymentRecovered
+    )
+
+    return () => {
+      window.removeEventListener(
+        'payment-recovered',
+        handlePaymentRecovered
+      )
+    }
   }, [])
 
   const normalizeStatus = (status) => {
-
-    return String(
-      status || ''
-    ).trim().toUpperCase()
-
+    return String(status || '')
+      .trim()
+      .toUpperCase()
   }
-  const getStatusStyle = (status) => {
 
-    const normalized =
-      normalizeStatus(status)
+  // SUCCESS + RECOVERED are treated as successfully completed payments.
+  const isSuccessfulStatus = (status) => {
+    const normalized = normalizeStatus(status)
 
-    if (
+    return (
       normalized === 'SUCCESS' ||
       normalized === 'SUCCEEDED' ||
-      normalized === 'PAID'
-    ) {
+      normalized === 'PAID' ||
+      normalized === 'RECOVERED'
+    )
+  }
 
+  const isFailedStatus = (status) => {
+    const normalized = normalizeStatus(status)
+
+    return (
+      normalized === 'FAILED' ||
+      normalized === 'FAILURE'
+    )
+  }
+
+  const getStatusStyle = (status) => {
+    const normalized = normalizeStatus(status)
+
+    if (isSuccessfulStatus(normalized)) {
       return {
         container:
           'bg-emerald-50 text-emerald-700 border-emerald-100',
-
         icon:
           'text-emerald-500',
-
         Icon:
           CheckCircle2,
       }
-
     }
 
-
-    if (
-      normalized === 'FAILED' ||
-      normalized === 'FAILURE'
-    ) {
-
+    if (isFailedStatus(normalized)) {
       return {
         container:
           'bg-red-50 text-red-700 border-red-100',
-
         icon:
           'text-red-500',
-
         Icon:
           XCircle,
       }
-
     }
-
 
     if (
       normalized === 'RETRYING' ||
       normalized === 'RETRY_SCHEDULED'
     ) {
-
       return {
         container:
           'bg-indigo-50 text-indigo-700 border-indigo-100',
-
         icon:
           'text-indigo-500',
-
         Icon:
           RefreshCw,
       }
-
     }
-
 
     return {
       container:
         'bg-amber-50 text-amber-700 border-amber-100',
-
       icon:
         'text-amber-500',
-
       Icon:
         Clock3,
     }
-
   }
+
   const statistics = useMemo(() => {
-
-    const total =
-      payments.length
-
+    const total = payments.length
 
     const successful =
-      payments.filter((payment) => {
-
-        const status =
-          normalizeStatus(
-            payment.status
-          )
-
-        return (
-          status === 'SUCCESS' ||
-          status === 'SUCCEEDED' ||
-          status === 'PAID'
-        )
-
-      }).length
-
+      payments.filter((payment) =>
+        isSuccessfulStatus(payment.status)
+      ).length
 
     const failed =
-      payments.filter((payment) => {
-
-        const status =
-          normalizeStatus(
-            payment.status
-          )
-
-        return (
-          status === 'FAILED' ||
-          status === 'FAILURE'
-        )
-
-      }).length
-
+      payments.filter((payment) =>
+        isFailedStatus(payment.status)
+      ).length
 
     const pending =
       total -
       successful -
       failed
 
-
     const totalAmount =
       payments.reduce(
         (sum, payment) => {
-
           return (
             sum +
-            Number(
-              payment.amount || 0
-            )
+            Number(payment.amount || 0)
           )
-
         },
         0
       )
 
-
     const recoveredAmount =
       payments
-        .filter((payment) => {
-
-          const status =
-            normalizeStatus(
-              payment.status
-            )
-
-          return (
-            status === 'SUCCESS' ||
-            status === 'SUCCEEDED' ||
-            status === 'PAID'
-          )
-
-        })
+        .filter((payment) =>
+          isSuccessfulStatus(payment.status)
+        )
         .reduce(
           (sum, payment) => {
-
             return (
               sum +
-              Number(
-                payment.amount || 0
-              )
+              Number(payment.amount || 0)
             )
-
           },
           0
         )
-
 
     return {
       total,
@@ -254,20 +223,17 @@ const navigate = useNavigate()
       totalAmount,
       recoveredAmount,
     }
-
   }, [payments])
+
   const filteredPayments =
     useMemo(() => {
-
       const value =
         search
           .trim()
           .toLowerCase()
 
-
       return payments.filter(
         (payment) => {
-
           const matchesSearch =
             !value ||
             String(
@@ -306,39 +272,46 @@ const navigate = useNavigate()
               .toLowerCase()
               .includes(value)
 
-
           const normalizedStatus =
             normalizeStatus(
               payment.status
             )
 
+          let matchesStatus = true
 
-          const matchesStatus =
-            statusFilter === 'ALL' ||
-            normalizedStatus ===
-              statusFilter
-
+          if (statusFilter === 'SUCCESS') {
+            matchesStatus =
+              isSuccessfulStatus(
+                normalizedStatus
+              )
+          } else if (statusFilter === 'FAILED') {
+            matchesStatus =
+              isFailedStatus(
+                normalizedStatus
+              )
+          } else if (statusFilter === 'PENDING') {
+            matchesStatus =
+              !isSuccessfulStatus(
+                normalizedStatus
+              ) &&
+              !isFailedStatus(
+                normalizedStatus
+              )
+          }
 
           return (
             matchesSearch &&
             matchesStatus
           )
-
         }
       )
-
     }, [
       payments,
       search,
       statusFilter,
     ])
 
-
-  /*
-   * Format amount
-   */
   const formatAmount = (amount) => {
-
     if (amount == null) {
       return '₹0'
     }
@@ -346,26 +319,20 @@ const navigate = useNavigate()
     return `₹${Number(
       amount
     ).toLocaleString('en-IN')}`
-
   }
+
   const LoadingState = () => {
-
     return (
-
       <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
         <div className="animate-pulse">
-
           <div className="h-14 bg-slate-50" />
 
           {[1, 2, 3, 4, 5].map(
             (item) => (
-
               <div
                 key={item}
                 className="flex items-center gap-6 border-t border-slate-100 px-6 py-5"
               >
-
                 <div className="h-9 w-9 rounded-lg bg-slate-200" />
 
                 <div className="h-4 w-40 rounded bg-slate-200" />
@@ -377,19 +344,14 @@ const navigate = useNavigate()
                 <div className="h-6 w-20 rounded-full bg-slate-200" />
 
                 <div className="h-4 w-28 rounded bg-slate-200" />
-
               </div>
-
             )
           )}
-
         </div>
-
       </div>
-
     )
-
   }
+
   const StatCard = ({
     title,
     value,
@@ -398,15 +360,10 @@ const navigate = useNavigate()
     iconClass,
     valueClass,
   }) => {
-
     return (
-
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-
         <div className="flex items-start justify-between">
-
           <div>
-
             <p className="text-sm font-medium text-slate-500">
               {title}
             </p>
@@ -419,40 +376,77 @@ const navigate = useNavigate()
             >
               {value}
             </p>
-
           </div>
-
 
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconClass}`}
           >
-
             <Icon size={19} />
-
           </div>
-
         </div>
-
 
         <p className="mt-3 text-xs text-slate-400">
           {subtitle}
         </p>
-
       </div>
-
     )
-
   }
 
-
   return (
-
     <div className="page-container">
+
+      {/* ================= PAYMENT SUCCESS TOAST ================= */}
+
+      {paymentSuccess && (
+        <div className="fixed right-6 top-6 z-[9999] w-[360px] max-w-[calc(100vw-32px)] animate-[slideIn_.3s_ease-out]">
+          <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-2xl">
+
+            <div className="flex items-start gap-3 p-4">
+
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2
+                  size={21}
+                  className="text-emerald-600"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900">
+                  Payment Recovered
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Payment successfully verified and recovered.
+                </p>
+
+                <p className="mt-2 text-sm font-semibold text-emerald-600">
+                  {formatAmount(paymentSuccess.amount)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPaymentSuccess(null)
+                }
+                className="text-slate-400 transition hover:text-slate-600"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="h-1 bg-emerald-500" />
+
+          </div>
+        </div>
+      )}
+
+      {/* ================= HEADER ================= */}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
         <div>
-
           <div className="flex items-center gap-2">
 
             <h1 className="page-title">
@@ -465,16 +459,11 @@ const navigate = useNavigate()
 
           </div>
 
-
           <p className="page-subtitle">
-
             Monitor payment transactions,
             failures and recovery activity.
-
           </p>
-
         </div>
-
 
         <div className="flex items-center gap-3">
 
@@ -486,19 +475,14 @@ const navigate = useNavigate()
             />
 
             <span className="text-sm font-semibold text-slate-600">
-
               {payments.length}
-
             </span>
 
             <span className="text-sm text-slate-400">
-
               payments
-
             </span>
 
           </div>
-
 
           <button
             type="button"
@@ -508,7 +492,6 @@ const navigate = useNavigate()
             disabled={refreshing}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-
             <RefreshCw
               size={16}
               className={
@@ -519,23 +502,25 @@ const navigate = useNavigate()
             />
 
             Refresh
-
           </button>
 
           <button
-  type="button"
-  onClick={() => navigate('/payments/recent')}
-  className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
->
-  <CreditCard size={16} />
-  Recent Payments
-</button>
+            type="button"
+            onClick={() =>
+              navigate('/payments/recent')
+            }
+            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <CreditCard size={16} />
+            Recent Payments
+          </button>
 
         </div>
-
       </div>
-      {!loading && !error && (
 
+      {/* ================= STATISTICS ================= */}
+
+      {!loading && !error && (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           <StatCard
@@ -546,22 +531,22 @@ const navigate = useNavigate()
             iconClass="bg-indigo-50 text-indigo-600"
           />
 
-
           <StatCard
             title="Successful"
             value={statistics.successful}
-            subtitle={`${statistics.total > 0
-              ? (
-                  statistics.successful /
-                  statistics.total *
-                  100
-                ).toFixed(1)
-              : 0}% success rate`}
+            subtitle={`${
+              statistics.total > 0
+                ? (
+                    statistics.successful /
+                    statistics.total *
+                    100
+                  ).toFixed(1)
+                : 0
+            }% success rate`}
             icon={CheckCircle2}
             iconClass="bg-emerald-50 text-emerald-600"
             valueClass="text-emerald-600"
           />
-
 
           <StatCard
             title="Failed"
@@ -571,7 +556,6 @@ const navigate = useNavigate()
             iconClass="bg-red-50 text-red-500"
             valueClass="text-red-500"
           />
-
 
           <StatCard
             title="Recovered Revenue"
@@ -585,11 +569,11 @@ const navigate = useNavigate()
           />
 
         </div>
-
       )}
-      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 
-        {/* Search */}
+      {/* ================= SEARCH + FILTER ================= */}
+
+      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 
         <div className="relative w-full lg:max-w-md">
 
@@ -612,9 +596,6 @@ const navigate = useNavigate()
 
         </div>
 
-
-        {/* Filters */}
-
         <div className="flex items-center gap-2 overflow-x-auto">
 
           <div className="flex items-center gap-2 text-sm text-slate-400">
@@ -627,7 +608,6 @@ const navigate = useNavigate()
 
           </div>
 
-
           {[
             ['ALL', 'All'],
             ['SUCCESS', 'Successful'],
@@ -635,7 +615,6 @@ const navigate = useNavigate()
             ['PENDING', 'Pending'],
           ].map(
             ([value, label]) => (
-
               <button
                 key={value}
                 type="button"
@@ -650,47 +629,40 @@ const navigate = useNavigate()
                     : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                 }`}
               >
-
                 {label}
-
               </button>
-
             )
           )}
 
         </div>
-
       </div>
+
+      {/* ================= LOADING ================= */}
+
       {loading && (
         <LoadingState />
       )}
-      {!loading && error && (
 
+      {/* ================= ERROR ================= */}
+
+      {!loading && error && (
         <div className="mt-6 rounded-2xl border border-red-100 bg-red-50 p-6">
 
           <div className="flex items-start gap-3">
 
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
-
               <AlertCircle size={18} />
-
             </div>
-
 
             <div>
 
               <p className="text-sm font-semibold text-red-700">
-
                 Unable to load payments
-
               </p>
 
               <p className="mt-1 text-sm text-red-600">
-
                 {error}
-
               </p>
-
 
               <button
                 type="button"
@@ -707,43 +679,30 @@ const navigate = useNavigate()
           </div>
 
         </div>
-
       )}
 
-
-      {/* ================================================= */}
-      {/* TABLE */}
-      {/* ================================================= */}
+      {/* ================= TABLE ================= */}
 
       {!loading && !error && (
-
         <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-          {/* Table Header */}
 
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
 
             <div>
 
               <h2 className="text-sm font-semibold text-slate-900">
-
                 Recent Transactions
-
               </h2>
 
               <p className="mt-0.5 text-xs text-slate-400">
-
                 Showing {filteredPayments.length}
                 {' '}
                 of {payments.length} payments
-
               </p>
 
             </div>
 
-
             {search && (
-
               <button
                 type="button"
                 onClick={() =>
@@ -751,17 +710,11 @@ const navigate = useNavigate()
                 }
                 className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
               >
-
                 Clear search
-
               </button>
-
             )}
 
           </div>
-
-
-          {/* Horizontal scroll */}
 
           <div className="overflow-x-auto">
 
@@ -772,50 +725,32 @@ const navigate = useNavigate()
                 <tr>
 
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Payment
-
                   </th>
 
-
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Customer
-
                   </th>
 
-
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Amount
-
                   </th>
 
-
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Status
-
                   </th>
 
-
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Failure Reason
-
                   </th>
 
-
                   <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-
                     Action
-
                   </th>
 
                 </tr>
 
               </thead>
-
 
               <tbody className="divide-y divide-slate-100">
 
@@ -830,22 +765,22 @@ const navigate = useNavigate()
                     const StatusIcon =
                       status.Icon
 
-
                     const normalizedStatus =
                       normalizeStatus(
                         payment.status
                       )
 
-
                     const isFailed =
-                      normalizedStatus ===
-                        'FAILED' ||
-                      normalizedStatus ===
-                        'FAILURE'
+                      isFailedStatus(
+                        normalizedStatus
+                      )
 
+                    const isRecovered =
+                      isSuccessfulStatus(
+                        normalizedStatus
+                      )
 
                     return (
-
                       <tr
                         key={
                           payment.id ||
@@ -854,6 +789,9 @@ const navigate = useNavigate()
                         }
                         className="group transition hover:bg-slate-50/70"
                       >
+
+                        {/* PAYMENT */}
+
                         <td className="px-6 py-5">
 
                           <div className="flex items-center gap-3">
@@ -866,17 +804,17 @@ const navigate = useNavigate()
 
                             </div>
 
-
                             <div>
 
                               <p className="text-sm font-semibold text-slate-800">
 
                                 {payment.paymentId ||
-                                  `PAY-${payment.id ||
-                                  index + 1}`}
+                                  `PAY-${
+                                    payment.id ||
+                                    index + 1
+                                  }`}
 
                               </p>
-
 
                               <p className="mt-1 text-xs text-slate-400">
 
@@ -891,6 +829,9 @@ const navigate = useNavigate()
                           </div>
 
                         </td>
+
+                        {/* CUSTOMER */}
+
                         <td className="px-6 py-5">
 
                           <div>
@@ -903,7 +844,6 @@ const navigate = useNavigate()
 
                             </p>
 
-
                             <p className="mt-1 max-w-[210px] truncate text-xs text-slate-400">
 
                               {payment.customer?.email ||
@@ -915,6 +855,9 @@ const navigate = useNavigate()
                           </div>
 
                         </td>
+
+                        {/* AMOUNT */}
+
                         <td className="px-6 py-5">
 
                           <div className="flex items-center gap-1">
@@ -938,7 +881,6 @@ const navigate = useNavigate()
 
                           </div>
 
-
                           <p className="mt-1 text-xs uppercase text-slate-400">
 
                             {payment.currency ||
@@ -947,6 +889,9 @@ const navigate = useNavigate()
                           </p>
 
                         </td>
+
+                        {/* STATUS */}
+
                         <td className="px-6 py-5">
 
                           <span
@@ -960,17 +905,17 @@ const navigate = useNavigate()
                               }
                             />
 
-                            {payment.status ||
-                              'PENDING'}
+                            {normalizedStatus ===
+                            'RECOVERED'
+                              ? 'RECOVERED'
+                              : payment.status ||
+                                'PENDING'}
 
                           </span>
 
                         </td>
 
-
-                        {/* ========================= */}
                         {/* FAILURE REASON */}
-                        {/* ========================= */}
 
                         <td className="px-6 py-5">
 
@@ -1002,6 +947,9 @@ const navigate = useNavigate()
                           )}
 
                         </td>
+
+                        {/* ACTION */}
+
                         <td className="px-6 py-5">
 
                           {isFailed ? (
@@ -1023,8 +971,7 @@ const navigate = useNavigate()
                               }
                             />
 
-                          ) : normalizedStatus ===
-                            'SUCCESS' ? (
+                          ) : isRecovered ? (
 
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
 
@@ -1047,9 +994,7 @@ const navigate = useNavigate()
                         </td>
 
                       </tr>
-
                     )
-
                   }
                 )}
 
@@ -1058,6 +1003,9 @@ const navigate = useNavigate()
             </table>
 
           </div>
+
+          {/* EMPTY STATE */}
+
           {filteredPayments.length === 0 && (
 
             <div className="border-t border-slate-100 px-6 py-16 text-center">
@@ -1068,21 +1016,14 @@ const navigate = useNavigate()
 
               </div>
 
-
               <h3 className="mt-4 text-sm font-semibold text-slate-800">
-
                 No payments found
-
               </h3>
 
-
               <p className="mt-1 text-sm text-slate-400">
-
                 Try changing your search or
                 status filter.
-
               </p>
-
 
               {(search ||
                 statusFilter !== 'ALL') && (
@@ -1090,16 +1031,12 @@ const navigate = useNavigate()
                 <button
                   type="button"
                   onClick={() => {
-
                     setSearch('')
                     setStatusFilter('ALL')
-
                   }}
                   className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
                 >
-
                   Clear filters
-
                 </button>
 
               )}
@@ -1109,14 +1046,10 @@ const navigate = useNavigate()
           )}
 
         </div>
-
       )}
 
     </div>
-
   )
-
 }
-
 
 export default Payments
